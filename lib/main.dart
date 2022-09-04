@@ -15,9 +15,9 @@ class NoteApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: const HomeScreen(),
+      home: HomeScreen(),
       routes: {
-        home_screen_route: (context) => const HomeScreen(),
+        home_screen_route: (context) => HomeScreen(),
         add_edit_screen_route: (context) => AddEditNoteScreen(),
       },
     );

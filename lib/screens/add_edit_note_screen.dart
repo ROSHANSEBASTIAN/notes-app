@@ -1,7 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:notes_never_forget/api/note_apis.dart';
-import 'package:notes_never_forget/models/note_model/note_model.dart';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
+
+import '../api/note_apis.dart';
+import '../models/note_model/note_model.dart';
+import '../utils/note_detail_screen_controller.dart';
 import '../constants/common_constants.dart';
 
 class AddEditNoteScreen extends StatefulWidget {
@@ -18,12 +21,29 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
     String _id;
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
+    NoteModel? _selectedNote;
 
     final _rxdValues =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
 
     _actionType = _rxdValues["actionType"];
-    // _id = _rxdValues["id"];
+
+    if (_actionType == ActionType.editNote) {
+      print("Edit mode");
+      _id = _rxdValues["id"];
+      if (_id == null) {
+        Navigator.of(context).pop();
+      } else {
+        _selectedNote = getNoteById(_id);
+        if (_selectedNote == null) {
+          Navigator.of(context).pop();
+        } else {
+          // populating fields
+          titleController.text = _selectedNote.title ?? "";
+          descriptionController.text = _selectedNote.content ?? "";
+        }
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -69,9 +89,16 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
                 onPressed: () {
                   final _title = titleController.text;
                   final _description = descriptionController.text;
-                  submitHandler(_title, _description, context);
+                  submitHandler(
+                    _title,
+                    _description,
+                    context,
+                    _actionType,
+                    _selectedNote,
+                  );
                 },
-                child: const Text("Submit"))
+                child:
+                    Text(_actionType == ActionType.addNote ? "Add" : "Update"))
           ],
         ),
       ),
@@ -79,30 +106,46 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
   }
 
   Future<void> submitHandler(
-      String title, String description, BuildContext context) async {
-    print("Saving");
+      String title,
+      String description,
+      BuildContext context,
+      ActionType actionType,
+      NoteModel? selectedNote) async {
+    print("Saving " + title + ", " + description);
     if (title.isEmpty || description.isEmpty) {
       return;
     }
-    print("Saving 2");
-    final _newNote = NoteModel.create(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: title,
-      content: description,
-    );
-    print("Saving 3 " + _newNote.toJson().toString());
-    final _addedNote = await NoteAPIs().createNote(_newNote);
-    if (_addedNote != null) {
+    NoteModel? _savedNote;
+    if (actionType == ActionType.addNote) {
+      print("Saving 2");
+      final _newNote = NoteModel.create(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        content: description,
+      );
+      print("Saving 3 " + _newNote.toJson().toString());
+      _savedNote = await NoteAPIs.instance.createNote(_newNote);
+    } else {
+      _savedNote = await NoteAPIs.instance.editNote(NoteModel(
+        content: description,
+        title: title,
+        id: selectedNote?.id,
+      ));
+    }
+
+    if (_savedNote != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("New note added successfully"),
+        SnackBar(
+          content: Text(actionType == ActionType.addNote
+              ? "New note added successfully"
+              : "Note edited successfully"),
         ),
       );
       Navigator.of(context).pop();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Failed to add new note"),
+          content: Text("Failed to save note"),
         ),
       );
     }

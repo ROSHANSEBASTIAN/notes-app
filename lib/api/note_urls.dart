@@ -4,6 +4,6 @@ class NoteURLs {
 
   String createNote = "/create";
   String updateNote = "/update";
-  String deleteNote = "/delete{id}";
+  String deleteNote = "/delete/{id}";
   String getAllNotes = "/getAll";
 }
